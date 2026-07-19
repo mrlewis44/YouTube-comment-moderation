@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   CATEGORY_LABELS,
   CHANNELS,
+  OPPORTUNITY_NOTIFY_THRESHOLD,
   type Category,
   type ChannelKey,
   type DraftVoice,
@@ -154,6 +155,14 @@ function CommentCard({
             repeat author · {c.authorOffenseCount} flags
           </span>
         )}
+        {c.opportunityType &&
+          c.opportunityType !== "none" &&
+          (c.opportunityScore ?? 0) >= OPPORTUNITY_NOTIFY_THRESHOLD && (
+            <span className="rounded-full bg-gold/25 px-2 py-0.5 font-medium text-ink">
+              {c.opportunityType === "loan" ? "Loan lead" : "Real estate lead"} ·{" "}
+              {Math.round((c.opportunityScore ?? 0) * 100)}% · pinged to Chat
+            </span>
+          )}
       </div>
 
       <div className="mb-1 text-sm font-medium text-ink">{c.author}</div>

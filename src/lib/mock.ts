@@ -2,7 +2,13 @@
 // wired. These are calibrated to the taxonomy examples in SPEC Section 5 so the
 // queue demonstrates every category and the two draft voices. Not real data.
 
-import type { Category, ChannelKey, DraftVoice, ReviewStatus } from "./domain";
+import type {
+  Category,
+  ChannelKey,
+  DraftVoice,
+  OpportunityType,
+  ReviewStatus,
+} from "./domain";
 
 export type MockComment = {
   id: string;
@@ -22,6 +28,9 @@ export type MockComment = {
   // For spam clusters (SPEC Section 5): sibling comment ids in the same unit.
   clusterWith?: string[];
   authorOffenseCount?: number;
+  // Opportunity signal (SPEC Section 8a).
+  opportunityType?: OpportunityType;
+  opportunityScore?: number;
 };
 
 export const MOCK_COMMENTS: MockComment[] = [
@@ -69,6 +78,8 @@ export const MOCK_COMMENTS: MockComment[] = [
       "Eight months across three counties is usually the problem right there. When you spread across that many markets you are never the most prepared buyer in any one of them. Start with the end in mind, pick the one area you actually want to be in, and work outward from there only if the price point forces it. Focus tends to fix the losing streak faster than a bigger search does, right?",
     draftVoice: "jeb",
     status: "pending",
+    opportunityType: "real_estate",
+    opportunityScore: 0.74,
   },
   {
     id: "c4",
@@ -172,5 +183,7 @@ export const MOCK_COMMENTS: MockComment[] = [
       "There is a catch and it is worth understanding before you sign. You never actually skip a payment. Those two payments get financed into the new loan balance, so your loan grows by roughly that amount plus the interest and escrow they roll in. It can make sense in specific cases, but the honest version is you are borrowing those payments, not skipping them. Ask them to show you the new loan balance next to your current one and you will see it.",
     draftVoice: "josh",
     status: "pending",
+    opportunityType: "loan",
+    opportunityScore: 0.68,
   },
 ];

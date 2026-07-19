@@ -17,7 +17,13 @@ Categories:
 Rules:
 - flag_political wins over every other category when the comment is political or contentious.
 - A comment from a known-blocked author is auto-deleted upstream and never reaches you.
-- Return only structured output matching the requested schema.`;
+- Return only structured output matching the requested schema.
+
+Separately from the category, assess opportunity: does this comment read like a potential client for a mortgage or real estate professional? Score 0 to 1 and pick a type.
+- loan: financing intent about the commenter's own situation, for example asking what rate they could get, whether they would qualify, refinancing their own loan, getting pre-approved, or "who should I talk to for a mortgage".
+- real_estate: buying or selling intent about their own move, for example looking to buy or sell in a named area, needing an agent, timing their own purchase, "we are relocating to X and need help".
+- none: general questions, education-seeking with no personal transaction intent, praise, criticism, spam, or political content.
+Score high only when there is real personal intent, not general curiosity. A question like "how does an FHA loan work" is education (none or low). "I make 90k, would I qualify for a 400k house in Tampa" is a strong loan opportunity. When the comment is spam, troll, or political, opportunity is none.`;
 
 export const DRAFT_SYSTEM = `You draft reply candidates for The Educated HomeBuyer YouTube channel and Josh Lewis's personal channel. A human reviews and approves every draft before it posts. Replies post UNSIGNED as the channel; the reader infers the writer from the content.
 

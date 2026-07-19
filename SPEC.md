@@ -54,7 +54,7 @@ Questions go unanswered, engagement opportunities are missed, and spam/troll com
 - `channels`: id, **platform** (enum: youtube, instagram, tiktok, facebook, only `youtube` populated in this build), platform_channel_id, display_name, oauth_refresh_token (encrypted), connected_by, connected_at. Renamed from `youtube_channel_id` to `platform_channel_id` and added the `platform` column now, even though only YouTube ships here, so future platforms are additive rather than a schema migration. See Section 10.
 - `users`: id, email, role (admin/member), channel_access (array)
 - `comments`: id, channel_id, video_id, video_title, platform_comment_id, author, author_channel_url, text, like_count, published_at, parent_comment_id (nullable, for replies), fetched_at
-- `comment_reviews`: id, comment_id, category (respond / ignore / delete_troll / delete_spam / flag_political), confidence_score, draft_reply_text, draft_voice (josh / jeb / house, a drafting/expertise signal for which host register the draft was written in, not a reviewer gate, see Section 6), status (pending / approved / edited / rejected / posted / deleted), reviewed_by, reviewed_at, action_taken_at
+- `comment_reviews`: id, comment_id, category (respond / ignore / delete_troll / delete_spam / flag_political), confidence_score, draft_reply_text, draft_voice (josh / jeb / house, a drafting/expertise signal for which host register the draft was written in, not a reviewer gate, see Section 6), opportunity_type (loan / real_estate / none) and opportunity_score (see Section 8a), notified_at (when a Google Chat ping was sent, nullable), status (pending / approved / edited / rejected / posted / deleted), reviewed_by, reviewed_at, action_taken_at
 - `authors`: id, channel_id, channel_url, display_name, offense_count (troll/spam actions taken against this author), **blocked (boolean, default false), blocked_at, blocked_by, blocked_reason (single_attack / accumulated_pattern)**, first_seen_at, last_flagged_at
 - `action_log`: id, comment_review_id, action_type, performed_by, performed_at, full audit trail of every post/delete/dismiss
 
@@ -141,6 +141,21 @@ TEHB replies post unsigned as the channel, so the reader infers the writer from 
 6. Review queue UI: filter by channel/category, see draft reply, edit inline, approve-and-post / approve-and-delete / dismiss
 7. Author offense tracking, repeat-offender surfacing
 8. Full action audit log
+9. High-priority opportunity notifications to Google Chat (Section 8a)
+
+## 8a. High-priority opportunity notifications (Google Chat)
+
+The review-queue cadence (Section 8) is built for triage, not speed. Some comments are worth a fast reach-out, a viewer signaling real buying, refinancing, or listing intent is a potential BuyWise or agent client, and making them wait for the Monday or Thursday review is a missed opportunity. This is that fast path.
+
+- **Opportunity signal.** The categorization pass (Section 5) emits a second, cross-cutting signal alongside the category: `opportunity_type` (loan / real_estate / none) and `opportunity_score` (0 to 1). It is independent of the category, a `respond` comment can also be a loan opportunity. Score high only on real personal transaction intent, not general curiosity. "How does an FHA loan work" is education (none). "I make 95k, would I qualify for a 420k house in Tampa, who do I talk to" is a strong loan opportunity. Spam, troll, and political comments are always none.
+  - loan: financing intent about the commenter's own situation (their rate, their qualification, refinancing their loan, getting pre-approved).
+  - real_estate: buying or selling intent about their own move (buying/selling in a named area, needing an agent, timing their own purchase).
+- **Notification.** When `opportunity_type` is not none and `opportunity_score` clears the threshold (default 0.6, tunable), the app posts a card to a Google Chat space via an incoming webhook (`GOOGLE_CHAT_WEBHOOK_URL`). The card carries the channel, author, video, the comment text, the signal type and score, and a deep link to the comment on YouTube. `notified_at` is stamped so the same comment is never pinged twice.
+- **Why Google Chat incoming webhook.** A space-scoped webhook URL needs no OAuth and no app-review, so it works day one and stays entirely server-side. Josh (and Jeb, if he wants the TEHB space) create the webhook in Space settings, Integrations, Webhooks, and paste the URL into the env var. If the URL is unset, notifications are skipped silently and nothing else in the pipeline is affected.
+- **Not an action, a heads-up.** The ping does not post or delete anything. It routes attention. The reply itself still goes through the normal human-approved queue. A loan-typed lead points at Josh, a real_estate-typed lead points at Jeb, but either can act, same as approval (Section 6).
+- **Notification failures never break ingestion.** A webhook error is caught and logged, the comment still lands in the queue.
+
+A test route (`POST /api/notify-test`, auth-gated) sends a sample card so the webhook can be verified before live ingestion runs.
 
 ## Phase 2 (post-trial)
 
@@ -163,6 +178,7 @@ ALLOWED_EMAILS=josh@buywisemortgage.com,jeb@jebsmith.net
 ANTHROPIC_API_KEY=
 DATABASE_URL=
 TOKEN_ENCRYPTION_KEY=
+GOOGLE_CHAT_WEBHOOK_URL=   # Section 8a, optional; unset = notifications skipped
 ```
 
 ---

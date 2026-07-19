@@ -16,6 +16,9 @@ export const ENV = {
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
   databaseUrl: process.env.POSTGRES_URL ?? process.env.DATABASE_URL ?? "",
   tokenEncryptionKey: process.env.TOKEN_ENCRYPTION_KEY ?? "",
+  // Google Chat incoming-webhook URL for high-priority opportunity pings
+  // (SPEC Section 8a). Optional: if unset, notifications are skipped silently.
+  googleChatWebhookUrl: process.env.GOOGLE_CHAT_WEBHOOK_URL ?? "",
   // App-level login allowlist (SPEC Section 3). Separate from YouTube API auth.
   allowedEmails: list(process.env.ALLOWED_EMAILS),
   isProduction: process.env.NODE_ENV === "production",

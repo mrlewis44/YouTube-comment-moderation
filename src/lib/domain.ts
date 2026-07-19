@@ -72,3 +72,28 @@ export const DELETE_CATEGORIES: Category[] = ["delete_troll", "delete_spam"];
 export function isAutoReplyBlocked(category: Category): boolean {
   return category === "flag_political";
 }
+
+/**
+ * Opportunity signal (SPEC Section 8a). Cross-cutting on top of the category:
+ * does this comment look like a potential client, someone with buying,
+ * refinancing, or listing intent worth a fast personal reach-out? Routed to
+ * Google Chat as a high-priority ping so it does not wait for the next review.
+ */
+export const OPPORTUNITY_TYPES = ["loan", "real_estate", "none"] as const;
+export type OpportunityType = (typeof OPPORTUNITY_TYPES)[number];
+
+export const OPPORTUNITY_LABELS: Record<OpportunityType, string> = {
+  loan: "Loan opportunity",
+  real_estate: "Real estate opportunity",
+  none: "No opportunity",
+};
+
+/** Score at or above this fires a Google Chat notification (SPEC Section 8a). */
+export const OPPORTUNITY_NOTIFY_THRESHOLD = 0.6;
+
+export function isNotifiableOpportunity(
+  type: OpportunityType,
+  score: number,
+): boolean {
+  return type !== "none" && score >= OPPORTUNITY_NOTIFY_THRESHOLD;
+}

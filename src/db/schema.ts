@@ -34,6 +34,12 @@ export const categoryEnum = pgEnum("category", [
 
 export const draftVoiceEnum = pgEnum("draft_voice", ["josh", "jeb", "house"]);
 
+export const opportunityTypeEnum = pgEnum("opportunity_type", [
+  "loan",
+  "real_estate",
+  "none",
+]);
+
 export const reviewStatusEnum = pgEnum("review_status", [
   "pending",
   "approved",
@@ -127,6 +133,10 @@ export const commentReviews = pgTable("comment_reviews", {
   draftReplyText: text("draft_reply_text"),
   // Drafting/expertise signal, not a reviewer gate (SPEC Section 6).
   draftVoice: draftVoiceEnum("draft_voice"),
+  // Opportunity signal (SPEC Section 8a). Drives the Google Chat hot-lead ping.
+  opportunityType: opportunityTypeEnum("opportunity_type").default("none"),
+  opportunityScore: doublePrecision("opportunity_score").default(0),
+  notifiedAt: timestamp("notified_at", { withTimezone: true }),
   status: reviewStatusEnum("status").notNull().default("pending"),
   reviewedBy: text("reviewed_by"),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),

@@ -5,7 +5,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { ENV } from "./env";
-import { CATEGORIES, DRAFT_VOICES } from "./domain";
+import { CATEGORIES, DRAFT_VOICES, OPPORTUNITY_TYPES } from "./domain";
 import { CATEGORIZE_SYSTEM, DRAFT_SYSTEM } from "./prompts";
 
 const MODEL = "claude-sonnet-5";
@@ -23,6 +23,9 @@ export const categorizeResult = z.object({
   category: z.enum(CATEGORIES),
   confidence: z.number().min(0).max(1),
   reason: z.string(),
+  // Cross-cutting opportunity signal (SPEC Section 8a).
+  opportunityType: z.enum(OPPORTUNITY_TYPES).default("none"),
+  opportunityScore: z.number().min(0).max(1).default(0),
 });
 export type CategorizeResult = z.infer<typeof categorizeResult>;
 
@@ -52,14 +55,14 @@ export async function categorizeComment(input: {
     input.threadContext ? `Thread context:\n${input.threadContext}` : null,
     `Comment:\n${input.text}`,
     ``,
-    `Respond with a JSON object: {"category": one of ${CATEGORIES.join(" | ")}, "confidence": 0..1, "reason": short string}.`,
+    `Respond with a JSON object: {"category": one of ${CATEGORIES.join(" | ")}, "confidence": 0..1, "reason": short string, "opportunityType": one of ${OPPORTUNITY_TYPES.join(" | ")}, "opportunityScore": 0..1}.`,
   ]
     .filter(Boolean)
     .join("\n");
 
   const msg = await anthropic().messages.create({
     model: MODEL,
-    max_tokens: 300,
+    max_tokens: 350,
     system: CATEGORIZE_SYSTEM,
     messages: [{ role: "user", content: user }],
   });
