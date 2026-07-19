@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background-color: #faf6ee; /* bone */
+  color: #211a12; /* warm ink */
+  -webkit-font-smoothing: antialiased;
+}
