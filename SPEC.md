@@ -5,10 +5,14 @@
 **Delivery:** Next.js app on Vercel, extending the existing tehb-website Google Cloud OAuth client.
 
 > Voice grounding: reply-drafting rules in Section 6 are calibrated against the
-> TEHB editorial docs in the tehb-website repo (`docs/voice/anti-slop-SKILL.md`,
-> `docs/editorial/FACTS-CANON.md`, `docs/editorial/EDITORIAL-SOP.md`). Those files
-> are the source of truth for host voice, source-citation rules, and the offer
-> ladder. This spec does not restate them, it points to them.
+> TEHB editorial docs in the tehb-website repo. Both host voice-analysis docs are
+> in scope, TEHB is a two-host show and replies come in two registers:
+> `docs/voice/josh-voice-analysis.md` (mortgage/financing lens) and
+> `docs/voice/jeb-voice-analysis.md` (real estate/agent, buying-process, local-market
+> lens). The shared rules live in `docs/voice/anti-slop-SKILL.md` (Tier A pattern
+> ban, em-dash rule), `docs/editorial/FACTS-CANON.md` (source-citation rule, offer
+> ladder, Jeb-first host order), and `docs/editorial/EDITORIAL-SOP.md`. Those files
+> are the source of truth. This spec does not restate them, it points to them.
 
 ---
 
@@ -50,7 +54,7 @@ Questions go unanswered, engagement opportunities are missed, and spam/troll com
 - `channels`: id, **platform** (enum: youtube, instagram, tiktok, facebook, only `youtube` populated in this build), platform_channel_id, display_name, oauth_refresh_token (encrypted), connected_by, connected_at. Renamed from `youtube_channel_id` to `platform_channel_id` and added the `platform` column now, even though only YouTube ships here, so future platforms are additive rather than a schema migration. See Section 10.
 - `users`: id, email, role (admin/member), channel_access (array)
 - `comments`: id, channel_id, video_id, video_title, platform_comment_id, author, author_channel_url, text, like_count, published_at, parent_comment_id (nullable, for replies), fetched_at
-- `comment_reviews`: id, comment_id, category (respond / ignore / delete_troll / delete_spam / flag_political), confidence_score, draft_reply_text, status (pending / approved / edited / rejected / posted / deleted), reviewed_by, reviewed_at, action_taken_at
+- `comment_reviews`: id, comment_id, category (respond / ignore / delete_troll / delete_spam / flag_political), confidence_score, draft_reply_text, draft_voice (josh / jeb / house, which host register the draft was written in, see Section 6), status (pending / approved / edited / rejected / posted / deleted), reviewed_by, reviewed_at, action_taken_at
 - `authors`: id, channel_id, channel_url, display_name, offense_count (troll/spam actions taken against this author), **blocked (boolean, default false), blocked_at, blocked_by, blocked_reason (single_attack / accumulated_pattern)**, first_seen_at, last_flagged_at
 - `action_log`: id, comment_review_id, action_type, performed_by, performed_at, full audit trail of every post/delete/dismiss
 
@@ -88,8 +92,10 @@ Auto-delete-and-report only after the staged autonomy period (Section 7).
 
 Feed these constraints into the drafting prompt. The binding source is the
 tehb-website voice docs (`docs/voice/anti-slop-SKILL.md` and the Tier A pattern
-ban, `docs/editorial/FACTS-CANON.md` for the offer ladder and source rules). Key
-points, restated for the prompt:
+ban, `docs/editorial/FACTS-CANON.md` for the offer ladder and source rules, plus
+the two host voice-analysis docs). Key points, restated for the prompt:
+
+**Shared rules (every reply, both channels):**
 
 - No em dashes, ever. This is Josh's standing rule across all output. Use commas, parentheses, or a full stop.
 - Direct language, no flattery, no filler, no hedging. No Tier A slop patterns (negative parallelism, false suspense, rhetorical-question-and-answer, patronizing analogy).
@@ -97,6 +103,15 @@ points, restated for the prompt:
 - CTA (Roadmap link or a related video) is available but not mandatory on every reply, use it when it's a natural fit, not as a default close. Comment replies are not the Roadmap CTA context that podcast episodes are. Note the offer ladder: Quiz (rung 1), Blueprint workshop (rung 2), Roadmap conversation (rung 3, where actual numbers happen). Never blur the rungs or promise personal numbers a comment reply can't deliver.
 - On political or contentious topics: never generate an auto-postable reply. These always route to `flag_political` regardless of content quality.
 - Match the register already visible in TEHB's own past replies: measured, doesn't take the bait, redirects to substance.
+
+**Whose voice (TEHB channel is two hosts, pick the register by topic):**
+
+TEHB replies come in two distinct voices. The drafter should select which based on the comment's subject, and the review UI should show which voice a draft is written in so Josh or Jeb can retag it in one click if the topic is mixed.
+
+- **Josh (mortgage/financing lens)**, per `docs/voice/josh-voice-analysis.md`. Use for rates, loan structure, refinancing, points, MI, FHA vs conventional, qualification vs affordability, closing costs. His moves: deconstruct the "call center" pitch, side-by-side comparison, "different tools for different jobs," reframe lowest-rate to total-cost. Comfortable being blunt about bad advice.
+- **Jeb (real estate / buying-process lens)**, per `docs/voice/jeb-voice-analysis.md`. Use for agent questions, offers/contingencies, the search process, local vs national market, timing your life vs timing the market, "don't settle." His moves: personal story as proof (traded 2.9% for 7% for more space), the "two rules," geographic funnel, normalize the anxiety. Conversational, tag-question "right?" cadence.
+- Comments that don't clearly belong to either lens (general praise-with-a-question, show feedback) default to a neutral TEHB house voice that still obeys all shared rules. On the personal channel (`@joshlewisCMC`), always draft in Josh's voice.
+- Never blend the two into a fake merged persona. Pick one. A reply reads as one person talking, not a committee.
 
 ---
 
