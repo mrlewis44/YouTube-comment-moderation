@@ -19,10 +19,22 @@ export const ENV = {
   // Google Chat incoming-webhook URL for high-priority opportunity pings
   // (SPEC Section 8a). Optional: if unset, notifications are skipped silently.
   googleChatWebhookUrl: process.env.GOOGLE_CHAT_WEBHOOK_URL ?? "",
+  // Public base URL, used to build the YouTube OAuth callback redirect.
+  appUrl: process.env.NEXTAUTH_URL ?? "http://localhost:3000",
+  // Shared secret protecting the cron ingest endpoint (SPEC Section 8, cadence).
+  cronSecret: process.env.CRON_SECRET ?? "",
   // App-level login allowlist (SPEC Section 3). Separate from YouTube API auth.
   allowedEmails: list(process.env.ALLOWED_EMAILS),
   isProduction: process.env.NODE_ENV === "production",
 };
+
+/** Redirect URI registered with the OAuth client for the YouTube connect flow. */
+export function youtubeRedirectUri(): string {
+  return `${ENV.appUrl.replace(/\/$/, "")}/api/youtube/callback`;
+}
+
+/** The scope that lets the app read and moderate comments (SPEC Section 3). */
+export const YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl";
 
 export function isAllowedEmail(email: string | null | undefined): boolean {
   if (!email) return false;

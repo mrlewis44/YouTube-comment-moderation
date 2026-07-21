@@ -32,11 +32,23 @@ Built and working:
   and blocking rules (confidence-branched blocking, reversible spam hide,
   no auto-reply on political).
 
-Not yet built (needs the Section 11 items resolved):
+- YouTube OAuth connection flow: per-channel authorize at `/connect` (admin),
+  refresh token stored AES-256-GCM encrypted (`src/lib/crypto.ts`).
+- Ingestion pipeline: `/api/cron/ingest` (Vercel Cron every 15 min, `CRON_SECRET`
+  gated) pulls threads, applies the dedup / host-reply-resolution / blocked-author
+  rules (`src/lib/ingest-core.ts`, unit-tested), then persists, categorizes,
+  drafts `respond` replies, and fires opportunity pings. Reads fall back to mock
+  data until a channel token exists, so the pipeline runs before go-live.
+- YouTube client (`src/lib/youtube.ts`) with reversible spam hide via
+  `setModerationStatus(rejected)` per SPEC Section 7.
 
-- YouTube OAuth connection flow and the live poll/ingest job.
-- Real post/delete/hide write calls and the action log persistence.
-- Author offense tracking against the live DB.
+Not yet built (needs the Section 11 items resolved and credentials in place):
+
+- Wiring the review-queue buttons to the live post/hide calls + action log
+  (the write client and schema are ready; the queue still runs on mock actions).
+- Author offense accrual and one-click blocking against the live DB.
+- Staged-autonomy graduation tracking for `delete_spam` (SPEC Section 7).
+- Vercel deploy (project + env + cron are configured in `vercel.json`).
 
 ## Local development
 
