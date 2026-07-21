@@ -9,7 +9,10 @@ import { ingestChannel } from "@/lib/ingest";
 import { CHANNELS, type ChannelKey } from "@/lib/domain";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300;
+// 60s is safe on every Vercel plan and ample for an incremental 15-min ingest
+// of these low-volume channels. Raise only if a large historical backfill run
+// needs more headroom (and the plan allows it).
+export const maxDuration = 60;
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization");
