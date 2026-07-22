@@ -23,7 +23,14 @@ export type IngestSummary = {
   resolvedThreads: number;
   duplicates: number;
   notified: number;
+  remaining: number;
 };
+
+// Cap the Claude-categorization work per run so a single invocation stays well
+// under the 60s function limit. The rest are picked up on the next sync/cron
+// (they are not yet stored, so they re-surface as new). Keeps the first
+// backfill from timing out on a large backlog.
+const MAX_PER_RUN = 15;
 
 export async function ingestChannel(
   channelKey: ChannelKey,
@@ -95,8 +102,9 @@ export async function ingestChannel(
     }
   }
 
-  // New comments: store, categorize, draft, notify.
-  for (const c of part.toQueue) {
+  // New comments: store, categorize, draft, notify. Capped per run.
+  const toProcess = part.toQueue.slice(0, MAX_PER_RUN);
+  for (const c of toProcess) {
     const [ins] = await db
       .insert(comments)
       .values(commentRow(row.id, c))
@@ -156,11 +164,12 @@ export async function ingestChannel(
 
   return {
     channel: channelKey,
-    queued: part.toQueue.length,
+    queued: toProcess.length,
     autoDeleted: part.toAutoDelete.length,
     resolvedThreads: part.resolvedThreadIds.length,
     duplicates: part.skippedDuplicates,
     notified,
+    remaining: Math.max(0, part.toQueue.length - toProcess.length),
   };
 }
 

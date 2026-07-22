@@ -28,5 +28,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# drizzle
-/drizzle/meta
+# drizzle: migrations and meta ARE committed so they run at deploy time

@@ -8,6 +8,12 @@ import { accessFor } from "../src/lib/access";
 import { sql } from "drizzle-orm";
 
 async function main() {
+  // Guarded so a pre-Postgres build does not fail.
+  if (!process.env.POSTGRES_URL && !process.env.DATABASE_URL) {
+    console.log("[seed] No database URL set, skipping seed.");
+    return;
+  }
+
   // Channels. oauth_refresh_token stays null here; it is written by the
   // per-channel YouTube OAuth flow, encrypted, never seeded in plaintext.
   const channelIdByKey: Record<string, number> = {};

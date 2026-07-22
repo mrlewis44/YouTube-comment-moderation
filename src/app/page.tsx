@@ -2,16 +2,24 @@ import { redirect } from "next/navigation";
 import { auth, signOut } from "@/lib/auth";
 import { CHANNELS, type ChannelKey } from "@/lib/domain";
 import { MOCK_COMMENTS } from "@/lib/mock";
+import { loadQueue } from "@/lib/queue-data";
 import { ReviewQueue } from "@/components/ReviewQueue";
+import { SyncButton } from "@/components/SyncButton";
 
 export default async function Home() {
   const session = await auth();
   if (!session?.user?.email) redirect("/signin");
 
   const { email, role, channels } = session.user;
-  // Only show comments on channels this reviewer may access (SPEC Section 2).
   const accessible = new Set<ChannelKey>(channels);
-  const visible = MOCK_COMMENTS.filter((c) => accessible.has(c.channel));
+
+  // Prefer live comments from the DB; fall back to samples when there are none
+  // yet (before a channel is connected and ingested).
+  const live = await loadQueue(channels);
+  const usingSamples = live.length === 0;
+  const visible = usingSamples
+    ? MOCK_COMMENTS.filter((c) => accessible.has(c.channel))
+    : live;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-8">
@@ -29,26 +37,34 @@ export default async function Home() {
             {email} ({role})
           </p>
         </div>
-        <form
-          action={async () => {
-            "use server";
-            await signOut({ redirectTo: "/signin" });
-          }}
-        >
-          <button
-            type="submit"
-            className="rounded-btn border border-line px-3 py-2 text-sm text-ink-muted transition hover:bg-white"
+        <div className="flex items-center gap-2">
+          {role === "admin" && <SyncButton />}
+          <form
+            action={async () => {
+              "use server";
+              await signOut({ redirectTo: "/signin" });
+            }}
           >
-            Sign out
-          </button>
-        </form>
+            <button
+              type="submit"
+              className="rounded-btn border border-line px-3 py-2 text-sm text-ink-muted transition hover:bg-white"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
       </header>
 
-      <div className="mb-4 rounded-2xl border border-line bg-white/60 px-4 py-3 text-sm text-ink-muted">
-        Running on sample comments. Live YouTube ingestion, categorization, and
-        posting are wired once the OAuth scope, database, and API keys are in
-        place (see SPEC Sections 3, 9, 11).
-      </div>
+      {usingSamples && (
+        <div className="mb-4 rounded-2xl border border-line bg-white/60 px-4 py-3 text-sm text-ink-muted">
+          Showing sample comments. Connect a channel at{" "}
+          <a href="/connect" className="font-medium text-ink underline">
+            /connect
+          </a>{" "}
+          and hit Sync now, real comments replace these automatically once a
+          channel is authorized and ingested.
+        </div>
+      )}
 
       <ReviewQueue
         comments={visible}
