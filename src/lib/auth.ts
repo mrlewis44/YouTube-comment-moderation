@@ -23,6 +23,8 @@ declare module "next-auth" {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: ENV.nextAuthSecret,
+  // Trust the Vercel deployment host for callback URL construction.
+  trustHost: true,
   providers: [
     Google({
       clientId: ENV.googleClientId,
