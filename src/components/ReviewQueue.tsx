@@ -39,21 +39,36 @@ export function ReviewQueue({
   const [categoryFilter, setCategoryFilter] = useState<Category | "all">("all");
   const [resolved, setResolved] = useState<Record<string, Resolution>>({});
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  // Ids the user has swept out of view with "Clear handled". On real data this
+  // is what a refresh does server-side: only pending comments come back.
+  const [cleared, setCleared] = useState<Set<string>>(new Set());
 
   const filtered = useMemo(
     () =>
       comments.filter(
         (c) =>
+          !cleared.has(c.id) &&
           (channelFilter === "all" || c.channel === channelFilter) &&
           (categoryFilter === "all" || c.category === categoryFilter),
       ),
-    [comments, channelFilter, categoryFilter],
+    [comments, channelFilter, categoryFilter, cleared],
   );
 
   const pendingCount = filtered.filter((c) => !resolved[c.id]).length;
+  const handledCount = filtered.filter((c) => resolved[c.id]).length;
 
   function resolve(id: string, how: Resolution) {
     setResolved((prev) => ({ ...prev, [id]: how }));
+  }
+
+  function clearHandled() {
+    setCleared((prev) => {
+      const next = new Set(prev);
+      filtered.forEach((c) => {
+        if (resolved[c.id]) next.add(c.id);
+      });
+      return next;
+    });
   }
 
   return (
@@ -80,7 +95,18 @@ export function ReviewQueue({
             })),
           ]}
         />
-        <span className="ml-auto text-sm text-ink-muted">
+        {handledCount > 0 && (
+          <button
+            type="button"
+            onClick={clearHandled}
+            className="ml-auto rounded-btn border border-line bg-white px-3 py-1.5 text-sm font-medium text-ink transition hover:bg-bone"
+          >
+            Clear handled ({handledCount})
+          </button>
+        )}
+        <span
+          className={`text-sm text-ink-muted ${handledCount > 0 ? "" : "ml-auto"}`}
+        >
           {pendingCount} pending
         </span>
       </div>
@@ -174,7 +200,8 @@ function CommentCard({
       {c.category === "respond" && (
         <div className="mb-3 rounded-btn border border-line bg-bone/60 p-3">
           <div className="mb-1.5 flex items-center gap-2 text-xs text-ink-muted">
-            <span>Draft reply</span>
+            <span className="font-medium text-ink">Draft reply</span>
+            <span>edit before posting</span>
             {c.draftVoice && (
               <span className="rounded-full bg-white px-2 py-0.5 font-medium text-ink">
                 {VOICE_LABELS[c.draftVoice]}
@@ -186,8 +213,14 @@ function CommentCard({
             onChange={(e) => onDraftChange(e.target.value)}
             disabled={!!resolution}
             rows={4}
-            className="w-full resize-y rounded-btn border border-line bg-white p-2 text-sm text-ink focus:border-ink focus:outline-none disabled:opacity-70"
+            aria-label="Editable draft reply"
+            className="w-full resize-y rounded-btn border border-line bg-white p-2 text-sm text-ink shadow-inner focus:border-ink focus:ring-1 focus:ring-ink focus:outline-none disabled:opacity-70"
           />
+          {!resolution && (
+            <div className="mt-1 text-right text-[11px] text-ink-muted">
+              {draft.trim().length} characters · your edits are what gets posted
+            </div>
+          )}
         </div>
       )}
 
