@@ -16,24 +16,28 @@ export function SyncButton() {
     try {
       const res = await fetch("/api/ingest/run", { method: "POST" });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Sync failed");
-      const results = data.results ?? [];
-      const queued = results.reduce(
-        (n: number, r: { queued?: number }) => n + (r.queued ?? 0),
-        0,
-      );
-      const remaining = results.reduce(
-        (n: number, r: { remaining?: number }) => n + (r.remaining ?? 0),
-        0,
-      );
-      setState("idle");
-      setMsg(
-        queued > 0
-          ? remaining > 0
-            ? `+${queued} new · ~${remaining} left, click again`
-            : `+${queued} new`
-          : "up to date",
-      );
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+      const results: Array<{
+        channel?: string;
+        queued?: number;
+        remaining?: number;
+        duplicates?: number;
+        autoDeleted?: number;
+        error?: string;
+      }> = data.results ?? [];
+
+      // Per-channel detail, INCLUDING errors, so failures are visible.
+      const lines = results.map((r) => {
+        if (r.error) return `${r.channel}: ERROR — ${r.error}`;
+        const parts = [`+${r.queued ?? 0} new`];
+        if (r.remaining) parts.push(`~${r.remaining} left`);
+        if (r.duplicates) parts.push(`${r.duplicates} already stored`);
+        if (r.autoDeleted) parts.push(`${r.autoDeleted} auto-hidden`);
+        return `${r.channel}: ${parts.join(", ")}`;
+      });
+      const anyError = results.some((r) => r.error);
+      setState(anyError ? "error" : "idle");
+      setMsg(lines.join("  |  ") || "no channels connected");
       router.refresh();
     } catch (err) {
       setState("error");
@@ -42,13 +46,19 @@ export function SyncButton() {
   }
 
   return (
-    <div className="flex items-center gap-2">
-      {msg && <span className="text-xs text-ink-muted">{msg}</span>}
+    <div className="flex max-w-xl items-center gap-2">
+      {msg && (
+        <span
+          className={`text-xs ${state === "error" ? "text-red-700" : "text-ink-muted"}`}
+        >
+          {msg}
+        </span>
+      )}
       <button
         type="button"
         onClick={run}
         disabled={state === "running"}
-        className="rounded-btn bg-ink px-3 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+        className="shrink-0 rounded-btn bg-ink px-3 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
       >
         {state === "running" ? "Syncing…" : "Sync now"}
       </button>
