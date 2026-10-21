@@ -10,8 +10,16 @@ import type {
   ReviewStatus,
 } from "./domain";
 
+// The shape the review queue renders. Live rows (queue-data.ts) and the
+// samples below share it; live rows also carry reviewId and the YouTube ids.
+export type QueueItem = MockComment;
+
 export type MockComment = {
   id: string;
+  // Present on live rows only: the comment_reviews id the actions act on.
+  reviewId?: number;
+  videoId?: string;
+  platformCommentId?: string;
   channel: ChannelKey;
   videoTitle: string;
   author: string;
@@ -28,9 +36,16 @@ export type MockComment = {
   // For spam clusters (SPEC Section 5): sibling comment ids in the same unit.
   clusterWith?: string[];
   authorOffenseCount?: number;
+  authorBlocked?: boolean;
   // Opportunity signal (SPEC Section 8a).
   opportunityType?: OpportunityType;
   opportunityScore?: number;
+  isQuestion?: boolean | null;
+  spamSignature?: string | null;
+  // A reply inside someone else's thread (the reply posts into that thread).
+  isReply?: boolean;
+  // Why the last automatic step on this item failed, if it did.
+  triageError?: string | null;
 };
 
 export const MOCK_COMMENTS: MockComment[] = [
