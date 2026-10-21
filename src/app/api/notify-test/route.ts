@@ -1,4 +1,4 @@
-// POST /api/notify-test — send a sample opportunity card to the configured
+// POST /api/notify-test: send a sample opportunity card to the configured
 // Google Chat webhook so Josh can confirm the space is wired before live
 // ingestion runs. Auth-gated. Does not touch the database.
 

@@ -1,4 +1,4 @@
-// POST /api/categorize — proxy to Claude for comment categorization.
+// POST /api/categorize: proxy to Claude for comment categorization.
 // Auth-gated: only allowlisted, signed-in users. Keeps ANTHROPIC_API_KEY
 // server-side (SPEC Section 3).
 

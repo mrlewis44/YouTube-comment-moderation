@@ -97,3 +97,16 @@ export function isNotifiableOpportunity(
 ): boolean {
   return type !== "none" && score >= OPPORTUNITY_NOTIFY_THRESHOLD;
 }
+
+/** Map a YouTube channel id back to its in-app key, if it is one of ours. */
+export function channelKeyForPlatformId(platformChannelId: string): ChannelKey | null {
+  for (const key of Object.keys(CHANNELS) as ChannelKey[]) {
+    if (CHANNELS[key].platformChannelId === platformChannelId) return key;
+  }
+  return null;
+}
+
+/** YouTube channel ids whose replies count as a host answer on either channel. */
+export function hostChannelIds(extra: string[] = []): string[] {
+  return [...Object.values(CHANNELS).map((c) => c.platformChannelId), ...extra];
+}
