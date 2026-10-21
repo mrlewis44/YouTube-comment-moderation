@@ -11,7 +11,7 @@ import { CATEGORIZE_SYSTEM, DRAFT_SYSTEM } from "./prompts";
 
 // SPEC Section 3: Claude Sonnet. The optional ANTHROPIC_MODEL env var changes
 // the model id without a code change.
-const MODEL = ENV.anthropicModel || "claude-sonnet-5";
+const MODEL = ENV.anthropicModel || "claude-sonnet-5-5";
 
 let client: Anthropic | null = null;
 function anthropic(): Anthropic {
