@@ -10,6 +10,7 @@ import {
   boolean,
   timestamp,
   doublePrecision,
+  jsonb,
   pgEnum,
   index,
   uniqueIndex,
@@ -47,6 +48,11 @@ export const reviewStatusEnum = pgEnum("review_status", [
   "rejected",
   "posted",
   "deleted",
+  // Added in 0001. resolved: a host already answered the thread (on YouTube or
+  // through the app), so it no longer needs action. restored: a hidden comment
+  // was put back on public view (an overturned moderation decision).
+  "resolved",
+  "restored",
 ]);
 
 export const blockedReasonEnum = pgEnum("blocked_reason", [
@@ -66,6 +72,11 @@ export const channels = pgTable("channels", {
   oauthRefreshToken: text("oauth_refresh_token"),
   connectedBy: text("connected_by"),
   connectedAt: timestamp("connected_at", { withTimezone: true }),
+  // Set when Google refuses the stored refresh token (invalid_grant). Cleared
+  // on the next successful token refresh or reconnect. Drives the "reconnect"
+  // banner in the connection-health panel.
+  tokenError: text("token_error"),
+  tokenErrorAt: timestamp("token_error_at", { withTimezone: true }),
 }, (t) => ({
   platformChannelIdx: uniqueIndex("channels_platform_channel_idx").on(
     t.platform,
@@ -87,7 +98,14 @@ export const authors = pgTable("authors", {
     .notNull()
     .references(() => channels.id),
   channelUrl: text("channel_url"),
+  // YouTube author channel id (snippet.authorChannelId.value). The stable key
+  // for an author; display names and URLs can change.
+  platformAuthorId: text("platform_author_id"),
   displayName: text("display_name"),
+  // Most recent comment id we took action on. Needed to block from the
+  // authors panel: YouTube's ban is applied through a comment
+  // (setModerationStatus rejected + banAuthor).
+  lastCommentId: text("last_comment_id"),
   // Troll/spam actions taken against this author (SPEC Section 5 blocking policy).
   offenseCount: integer("offense_count").notNull().default(0),
   blocked: boolean("blocked").notNull().default(false),
@@ -98,6 +116,10 @@ export const authors = pgTable("authors", {
   lastFlaggedAt: timestamp("last_flagged_at", { withTimezone: true }),
 }, (t) => ({
   channelUrlIdx: index("authors_channel_url_idx").on(t.channelId, t.channelUrl),
+  platformAuthorIdx: uniqueIndex("authors_channel_platform_author_idx").on(
+    t.channelId,
+    t.platformAuthorId,
+  ),
 }));
 
 export const comments = pgTable("comments", {
@@ -110,17 +132,25 @@ export const comments = pgTable("comments", {
   platformCommentId: text("platform_comment_id").notNull(),
   author: text("author"),
   authorChannelUrl: text("author_channel_url"),
+  // YouTube author channel id; used for host-reply detection and author tracking.
+  authorChannelId: text("author_channel_id"),
   text: text("text").notNull(),
+  // YouTube textDisplay (HTML). Kept because hidden link injection (SPEC 5,
+  // spam signature 2) only shows up as anchors in the rendered HTML.
+  textHtml: text("text_html"),
   likeCount: integer("like_count").notNull().default(0),
   publishedAt: timestamp("published_at", { withTimezone: true }),
   // Nullable: set when this comment is a reply within a thread (SPEC Section 4).
   parentCommentId: text("parent_comment_id"),
+  // Thread id (equals the top-level comment id on YouTube).
+  threadId: text("thread_id"),
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow(),
 }, (t) => ({
   platformCommentIdx: uniqueIndex("comments_platform_comment_idx").on(
     t.platformCommentId,
   ),
   channelVideoIdx: index("comments_channel_video_idx").on(t.channelId, t.videoId),
+  threadIdx: index("comments_thread_idx").on(t.threadId),
 }));
 
 export const commentReviews = pgTable("comment_reviews", {
@@ -141,9 +171,32 @@ export const commentReviews = pgTable("comment_reviews", {
   reviewedBy: text("reviewed_by"),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   actionTakenAt: timestamp("action_taken_at", { withTimezone: true }),
+  // Which delete_spam signature the categorizer matched (SPEC 5, 7):
+  // trading_testimonial | hidden_link | other. Drives the "two distinct
+  // signatures" graduation rule.
+  spamSignature: text("spam_signature"),
+  // Categorizer's read on whether the comment asks something (backlog sort).
+  isQuestion: boolean("is_question"),
+  // True when a human reversed this decision: a flagged spam comment marked
+  // "not spam", or a hidden comment restored. Resets spam graduation (SPEC 7).
+  overturned: boolean("overturned").notNull().default(false),
+  // True when the system acted without a human (graduated spam auto-hide,
+  // blocked-author auto-hide). Powers the "recently auto-actioned" view.
+  autoActioned: boolean("auto_actioned").notNull().default(false),
+  // Short-lived claim so two people (or the cron and a manual sync) never act
+  // on the same comment at once, which would double-post a reply.
+  claimedBy: text("claimed_by"),
+  claimedAt: timestamp("claimed_at", { withTimezone: true }),
+  // What actually went out, and the YouTube id of the posted reply.
+  postedText: text("posted_text"),
+  postedReplyId: text("posted_reply_id"),
+  // Triage bookkeeping: a review with category null is waiting for Claude.
+  triageAttempts: integer("triage_attempts").notNull().default(0),
+  triageError: text("triage_error"),
 }, (t) => ({
   statusIdx: index("comment_reviews_status_idx").on(t.status),
   categoryIdx: index("comment_reviews_category_idx").on(t.category),
+  commentIdx: index("comment_reviews_comment_idx").on(t.commentId),
 }));
 
 // Full audit trail of every post/delete/dismiss (SPEC Section 4).
@@ -155,6 +208,41 @@ export const actionLog = pgTable("action_log", {
   actionType: text("action_type").notNull(),
   performedBy: text("performed_by"),
   performedAt: timestamp("performed_at", { withTimezone: true }).defaultNow(),
+  // Structured context: posted reply id, edited flag, hide method, errors.
+  detail: jsonb("detail"),
+});
+
+// One row per channel per sync call (cron or "Sync now"). Powers the
+// connection-health panel: last successful sync, comments pulled, last error.
+export const syncRuns = pgTable("sync_runs", {
+  id: serial("id").primaryKey(),
+  channelId: integer("channel_id")
+    .notNull()
+    .references(() => channels.id),
+  trigger: text("trigger").notNull(), // cron | manual
+  phase: text("phase").notNull(), // full (fetch + triage) | triage
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
+  ok: boolean("ok").notNull().default(false),
+  threadsFetched: integer("threads_fetched").notNull().default(0),
+  commentsFetched: integer("comments_fetched").notNull().default(0),
+  newComments: integer("new_comments").notNull().default(0),
+  triaged: integer("triaged").notNull().default(0),
+  autoHidden: integer("auto_hidden").notNull().default(0),
+  resolved: integer("resolved").notNull().default(0),
+  remaining: integer("remaining").notNull().default(0),
+  errorKind: text("error_kind"),
+  errorMessage: text("error_message"),
+}, (t) => ({
+  channelStartedIdx: index("sync_runs_channel_started_idx").on(t.channelId, t.startedAt),
+}));
+
+// Small key/value store for app-wide switches (spam autopilot pause).
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedBy: text("updated_by"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
 export type Channel = typeof channels.$inferSelect;
@@ -163,3 +251,4 @@ export type Author = typeof authors.$inferSelect;
 export type Comment = typeof comments.$inferSelect;
 export type CommentReview = typeof commentReviews.$inferSelect;
 export type ActionLogEntry = typeof actionLog.$inferSelect;
+export type SyncRun = typeof syncRuns.$inferSelect;

@@ -1,4 +1,4 @@
-// GET /api/youtube/callback — exchange the OAuth code for tokens and store the
+// GET /api/youtube/callback: exchange the OAuth code for tokens and store the
 // refresh token, encrypted, on the channel row (SPEC Section 3). The refresh
 // token is the credential that lets the app read and moderate comments on that
 // channel; it never leaves the server and is never sent to the browser.
@@ -46,13 +46,42 @@ export async function GET(req: Request) {
   });
   if (!tokenRes.ok) return redirectToConnect(url.origin, `token exchange ${tokenRes.status}`);
 
-  const tokens = (await tokenRes.json()) as { refresh_token?: string };
+  const tokens = (await tokenRes.json()) as { refresh_token?: string; access_token?: string };
   if (!tokens.refresh_token) {
     // Happens if the account was already granted and prompt=consent was bypassed.
     return redirectToConnect(url.origin, "no refresh token returned, revoke and retry");
   }
 
   const meta = CHANNELS[channel];
+
+  // Make sure the Google account that just consented actually owns this
+  // channel. Otherwise reads would work (comments are public) but every reply
+  // and hide would fail with 403. For TEHB that means picking the brand
+  // account in Google's account picker, not Josh's personal account.
+  let verifyNote = "";
+  if (tokens.access_token) {
+    try {
+      const res = await fetch("https://www.googleapis.com/youtube/v3/channels?part=id,snippet&mine=true", {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { items?: { id: string; snippet?: { title?: string } }[] };
+        const owned = data.items ?? [];
+        if (!owned.some((c) => c.id === meta.platformChannelId)) {
+          const got = owned.map((c) => c.snippet?.title ?? c.id).join(", ") || "no YouTube channel";
+          return redirectToConnect(
+            url.origin,
+            `wrong account: you authorized ${got}, but this slot is for ${meta.displayName}. Click Connect again and choose the account that owns ${meta.handle} in Google's account picker.`,
+          );
+        }
+      } else {
+        verifyNote = " (could not confirm channel ownership, YouTube returned " + res.status + ")";
+      }
+    } catch {
+      verifyNote = " (could not confirm channel ownership)";
+    }
+  }
+
   const encrypted = encryptToken(tokens.refresh_token);
 
   await db
@@ -71,10 +100,12 @@ export async function GET(req: Request) {
         oauthRefreshToken: encrypted,
         connectedBy: session.user.email,
         connectedAt: new Date(),
+        tokenError: null,
+        tokenErrorAt: null,
       },
     });
 
-  return redirectToConnect(url.origin, `connected:${channel}`);
+  return redirectToConnect(url.origin, `connected:${channel}${verifyNote}`);
 }
 
 function redirectToConnect(origin: string, status: string) {

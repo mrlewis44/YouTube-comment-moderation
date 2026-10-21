@@ -1,4 +1,4 @@
-// POST /api/draft-reply — proxy to Claude for reply drafting.
+// POST /api/draft-reply: proxy to Claude for reply drafting.
 // Auth-gated. flag_political never gets an auto-postable reply (SPEC Sections 5, 6),
 // so this route refuses to draft for it.
 
