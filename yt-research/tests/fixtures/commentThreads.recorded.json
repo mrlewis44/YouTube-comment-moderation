@@ -1,0 +1,132 @@
+{
+  "kind": "youtube#commentThreadListResponse",
+  "etag": "fixture-etag",
+  "nextPageToken": "QURTSl9pM1ZwRlBy",
+  "pageInfo": { "totalResults": 3, "resultsPerPage": 100 },
+  "items": [
+    {
+      "kind": "youtube#commentThread",
+      "etag": "t1",
+      "id": "UgxTHREAD_answered",
+      "snippet": {
+        "channelId": "UCownerownerownerowner01",
+        "videoId": "dQw4w9WgXcQ",
+        "topLevelComment": {
+          "kind": "youtube#comment",
+          "etag": "c1",
+          "id": "UgxTHREAD_answered",
+          "snippet": {
+            "channelId": "UCownerownerownerowner01",
+            "videoId": "dQw4w9WgXcQ",
+            "textDisplay": "Should I buy points or put more down?",
+            "textOriginal": "Should I buy points or put more down?",
+            "authorDisplayName": "@emilyandjake",
+            "authorProfileImageUrl": "https://yt3.ggpht.com/a",
+            "authorChannelUrl": "http://www.youtube.com/@emilyandjake",
+            "authorChannelId": { "value": "UCviewerviewerviewervi01" },
+            "canRate": true,
+            "viewerRating": "none",
+            "likeCount": 12,
+            "publishedAt": "2026-10-15T16:20:00Z",
+            "updatedAt": "2026-10-15T16:20:00Z"
+          }
+        },
+        "canReply": true,
+        "totalReplyCount": 1,
+        "isPublic": true
+      },
+      "replies": {
+        "comments": [
+          {
+            "kind": "youtube#comment",
+            "etag": "r1",
+            "id": "UgxTHREAD_answered.REPLY1",
+            "snippet": {
+              "channelId": "UCownerownerownerowner01",
+              "videoId": "dQw4w9WgXcQ",
+              "textDisplay": "Run the breakeven first. Episode 212 covers it.",
+              "textOriginal": "Run the breakeven first. Episode 212 covers it.",
+              "parentId": "UgxTHREAD_answered",
+              "authorDisplayName": "@buyrightborrowsmart",
+              "authorChannelId": { "value": "UCownerownerownerowner01" },
+              "canRate": true,
+              "viewerRating": "none",
+              "likeCount": 3,
+              "publishedAt": "2026-10-15T18:00:00Z",
+              "updatedAt": "2026-10-15T18:00:00Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "youtube#commentThread",
+      "etag": "t2",
+      "id": "UgxTHREAD_unanswered",
+      "snippet": {
+        "channelId": "UCownerownerownerowner01",
+        "videoId": "dQw4w9WgXcQ",
+        "topLevelComment": {
+          "kind": "youtube#comment",
+          "etag": "c2",
+          "id": "UgxTHREAD_unanswered",
+          "snippet": {
+            "channelId": "UCownerownerownerowner01",
+            "videoId": "dQw4w9WgXcQ",
+            "textDisplay": "Great episode",
+            "textOriginal": "Great episode",
+            "authorDisplayName": "@listener",
+            "authorChannelId": { "value": "UCviewerviewerviewervi01" },
+            "canRate": true,
+            "viewerRating": "none",
+            "likeCount": 0,
+            "publishedAt": "2026-10-14T09:00:00Z",
+            "updatedAt": "2026-10-14T09:05:00Z"
+          }
+        },
+        "canReply": true,
+        "totalReplyCount": 0,
+        "isPublic": true
+      }
+    },
+    {
+      "kind": "youtube#commentThread",
+      "etag": "t3",
+      "id": "UgxTHREAD_busy",
+      "snippet": {
+        "channelId": "UCownerownerownerowner01",
+        "videoId": "dQw4w9WgXcQ",
+        "topLevelComment": {
+          "kind": "youtube#comment",
+          "etag": "c3",
+          "id": "UgxTHREAD_busy",
+          "snippet": {
+            "channelId": "UCownerownerownerowner01",
+            "videoId": "dQw4w9WgXcQ",
+            "textDisplay": "Rates are going to 5% by spring, change my mind",
+            "textOriginal": "Rates are going to 5% by spring, change my mind",
+            "authorDisplayName": "@ratewatcher",
+            "authorChannelId": { "value": "UCviewerviewerviewervi01" },
+            "canRate": true,
+            "viewerRating": "none",
+            "likeCount": 40,
+            "publishedAt": "2026-10-13T09:00:00Z",
+            "updatedAt": "2026-10-13T09:00:00Z"
+          }
+        },
+        "canReply": true,
+        "totalReplyCount": 7,
+        "isPublic": true
+      },
+      "replies": {
+        "comments": [
+          { "kind": "youtube#comment", "etag": "b1", "id": "UgxTHREAD_busy.R1", "snippet": { "parentId": "UgxTHREAD_busy", "textDisplay": "nope", "authorDisplayName": "@a", "authorChannelId": { "value": "UCviewerviewerviewervi01" }, "likeCount": 1, "publishedAt": "2026-10-13T10:00:00Z", "updatedAt": "2026-10-13T10:00:00Z" } },
+          { "kind": "youtube#comment", "etag": "b2", "id": "UgxTHREAD_busy.R2", "snippet": { "parentId": "UgxTHREAD_busy", "textDisplay": "yep", "authorDisplayName": "@b", "authorChannelId": { "value": "UCviewerviewerviewervi01" }, "likeCount": 0, "publishedAt": "2026-10-13T11:00:00Z", "updatedAt": "2026-10-13T11:00:00Z" } },
+          { "kind": "youtube#comment", "etag": "b3", "id": "UgxTHREAD_busy.R3", "snippet": { "parentId": "UgxTHREAD_busy", "textDisplay": "maybe", "authorDisplayName": "@c", "authorChannelId": { "value": "UCviewerviewerviewervi01" }, "likeCount": 0, "publishedAt": "2026-10-13T12:00:00Z", "updatedAt": "2026-10-13T12:00:00Z" } },
+          { "kind": "youtube#comment", "etag": "b4", "id": "UgxTHREAD_busy.R4", "snippet": { "parentId": "UgxTHREAD_busy", "textDisplay": "who knows", "authorDisplayName": "@d", "authorChannelId": { "value": "UCviewerviewerviewervi01" }, "likeCount": 0, "publishedAt": "2026-10-13T13:00:00Z", "updatedAt": "2026-10-13T13:00:00Z" } },
+          { "kind": "youtube#comment", "etag": "b5", "id": "UgxTHREAD_busy.R5", "snippet": { "parentId": "UgxTHREAD_busy", "textDisplay": "lol", "authorDisplayName": "@e", "authorChannelId": { "value": "UCviewerviewerviewervi01" }, "likeCount": 0, "publishedAt": "2026-10-13T14:00:00Z", "updatedAt": "2026-10-13T14:00:00Z" } }
+        ]
+      }
+    }
+  ]
+}
