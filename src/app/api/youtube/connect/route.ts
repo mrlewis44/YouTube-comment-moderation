@@ -1,4 +1,4 @@
-// GET /api/youtube/connect?channel=tehb — start the per-channel YouTube
+// GET /api/youtube/connect?channel=tehb: start the per-channel YouTube
 // authorization (SPEC Sections 2, 3). This is separate from app login: it
 // authorizes the app to read and moderate comments as the channel-owning
 // account. Admin only. Redirects to Google's consent screen with the

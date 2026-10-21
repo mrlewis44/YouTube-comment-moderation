@@ -26,6 +26,19 @@ export const ENV = {
   // App-level login allowlist (SPEC Section 3). Separate from YouTube API auth.
   allowedEmails: list(process.env.ALLOWED_EMAILS),
   isProduction: process.env.NODE_ENV === "production",
+  // Sample YouTube reads/writes for local development. Never on in production
+  // unless explicitly forced, so sample comments cannot reach the live DB.
+  allowMockYouTube:
+    process.env.COPILOT_MOCK_YOUTUBE === "1" ||
+    (process.env.NODE_ENV !== "production" && process.env.COPILOT_MOCK_YOUTUBE !== "0"),
+  // Optional override for the Claude model id (SPEC Section 3: Sonnet).
+  anthropicModel: process.env.ANTHROPIC_MODEL ?? "",
+  // Optional extra YouTube channel ids whose replies count as a host answer
+  // (for example Jeb's own channel). Both in-scope channels always count.
+  extraHostChannelIds: (process.env.HOST_CHANNEL_IDS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
 };
 
 /** Redirect URI registered with the OAuth client for the YouTube connect flow. */
