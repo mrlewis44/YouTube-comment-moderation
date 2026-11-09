@@ -92,13 +92,19 @@ export async function draftReply(input: {
   channelName: string;
   videoTitle?: string | null;
   text: string;
+  // A host asked for this draft on a comment triage did not flag for a reply
+  // (the Ignore queue), so a short or low-value comment still gets a draft.
+  onDemand?: boolean;
 }): Promise<DraftResult> {
   const user = [
     `Channel: ${input.channelName} (${input.channelKey})`,
     input.videoTitle ? `Video: ${input.videoTitle}` : null,
     `Comment to reply to:\n${input.text}`,
+    input.onDemand
+      ? `\nA host has decided to reply to this comment. Always write a draft, even if the comment is short, vague, or low value: one or two sentences is fine. Only return an empty draft if the comment is political or contentious.`
+      : null,
     ``,
-    `Respond with a JSON object: {"draft": the reply text, "voice": one of ${DRAFT_VOICES.join(" | ")}, "political": true | false}.`,
+    `Respond with only a JSON object and no other text: {"draft": the reply text, "voice": one of ${DRAFT_VOICES.join(" | ")}, "political": true | false}.`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -112,7 +118,15 @@ export async function draftReply(input: {
 
   const textBlock = msg.content.find((b) => b.type === "text");
   const raw = textBlock && "text" in textBlock ? textBlock.text : "";
-  const parsed = draftResult.parse(extractJson(raw));
+  let parsed: DraftResult;
+  try {
+    parsed = draftResult.parse(extractJson(raw));
+  } catch (err) {
+    // On-demand drafts are always reviewed and edited by a human before
+    // posting, so plain-text output is still useful as a starting draft.
+    if (!input.onDemand || !raw.trim()) throw err;
+    parsed = { draft: raw.trim(), voice: input.channelKey === "josh" ? "josh" : "house", political: false };
+  }
   return {
     ...parsed,
     draft: parsed.political ? "" : stripEmDashes(parsed.draft),

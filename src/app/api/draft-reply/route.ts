@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const result = await draftReply(input);
+    const result = await draftReply({ ...input, onDemand: input.category === "ignore" });
     return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Drafting failed";
