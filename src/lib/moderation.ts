@@ -10,7 +10,7 @@ import { stripEmDashes } from "./anthropic";
 import { findAuthor, recordOffense, setAuthorBlocked } from "./authors";
 import { clientForChannel, noteTokenHealth } from "./channel-client";
 import { CHANNELS, channelKeyForPlatformId, type ChannelKey } from "./domain";
-import { blockEligibility } from "./moderation-rules";
+import { blockEligibility, type BlockReason } from "./moderation-rules";
 import { REVERSIBLE_HIDE, type HideStatus } from "./youtube";
 import { YouTubeApiError, friendlyYouTubeError } from "./youtube-errors";
 
@@ -90,15 +90,19 @@ export async function performReviewAction(input: {
   const category = review.category;
   let replyText = "";
   if (action === "post_reply") {
-    if (category !== "respond" && category !== "flag_political") {
-      return fail(422, "Only respond and political comments can be replied to from the queue.");
+    if (category !== "respond" && category !== "flag_political" && category !== "ignore") {
+      return fail(422, "Only respond, political, and ignore comments can be replied to from the queue.");
     }
     replyText = stripEmDashes((input.text ?? "").trim());
     if (!replyText) return fail(422, "The reply is empty.");
     if (replyText.length > MAX_REPLY_CHARS) return fail(422, "The reply is too long for YouTube.");
   }
-  if ((action === "hide" || action === "hide_and_block") && category !== "delete_troll" && category !== "delete_spam") {
-    return fail(422, "Hide is only offered for troll and spam comments.");
+  // Troll and spam follow the blocking policy below. On the Ignore queue a
+  // human can still hide a comment, or hide it and block the author, because
+  // triage only judged it not worth a reply, not that it is acceptable.
+  const isFlagged = category === "delete_troll" || category === "delete_spam";
+  if ((action === "hide" || action === "hide_and_block") && !isFlagged && category !== "ignore") {
+    return fail(422, "Hide is offered for troll, spam, and ignored comments.");
   }
 
   const authorRef = {
@@ -108,8 +112,10 @@ export async function performReviewAction(input: {
     displayName: comment.author,
   };
 
-  let blockReason: "single_attack" | "accumulated_pattern" | null = null;
-  if (action === "hide_and_block") {
+  let blockReason: BlockReason | null = null;
+  if (action === "hide_and_block" && !isFlagged) {
+    blockReason = "manual";
+  } else if (action === "hide_and_block") {
     const author = await findAuthor(authorRef);
     const elig = blockEligibility({
       category,

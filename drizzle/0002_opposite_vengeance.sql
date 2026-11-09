@@ -1,0 +1,1 @@
+ALTER TYPE "public"."blocked_reason" ADD VALUE 'manual';

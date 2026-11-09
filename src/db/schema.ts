@@ -58,6 +58,8 @@ export const reviewStatusEnum = pgEnum("review_status", [
 export const blockedReasonEnum = pgEnum("blocked_reason", [
   "single_attack",
   "accumulated_pattern",
+  // A human chose to block from a comment the triage did not flag (Ignore queue).
+  "manual",
 ]);
 
 // Only `youtube` is populated in this build; the column exists now so future

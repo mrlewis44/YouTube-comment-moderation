@@ -18,10 +18,10 @@ export const UNAMBIGUOUS_TROLL_CONFIDENCE = 0.85;
 /** Offenses (troll or spam hides) at which an author is surfaced for blocking. SPEC says 2 to 3. */
 export const BLOCK_SURFACE_OFFENSES = 2;
 
-export type BlockReason = "single_attack" | "accumulated_pattern";
+export type BlockReason = "single_attack" | "accumulated_pattern" | "manual";
 
 export type BlockEligibility =
-  | { eligible: true; reason: BlockReason }
+  | { eligible: true; reason: Exclude<BlockReason, "manual"> }
   | { eligible: false; reason: null };
 
 /**

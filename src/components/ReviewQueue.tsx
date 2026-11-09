@@ -67,6 +67,7 @@ export function ReviewQueue({
   const [busy, setBusy] = useState<Record<string, Action | undefined>>({});
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [cleared, setCleared] = useState<Set<string>>(new Set());
+  const [drafting, setDrafting] = useState<Record<string, boolean>>({});
 
   const filtered = useMemo(
     () =>
@@ -107,6 +108,48 @@ export function ReviewQueue({
       setOutcomes((p) => ({ ...p, [c.id]: { ok: false, message: err instanceof Error ? err.message : "Network error" } }));
     } finally {
       setBusy((p) => ({ ...p, [c.id]: undefined }));
+    }
+  }
+
+  // On-demand Claude draft for a comment triage did not draft (the Ignore queue).
+  async function requestDraft(c: QueueItem) {
+    if (demo || !c.reviewId) {
+      setDrafts((p) => ({ ...p, [c.id]: "Sample draft: in the live queue Claude writes this in the channel's voice." }));
+      return;
+    }
+    setDrafting((p) => ({ ...p, [c.id]: true }));
+    try {
+      const res = await fetch("/api/draft-reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          channelKey: c.channel,
+          channelName: CHANNELS[c.channel].displayName,
+          videoTitle: c.videoTitle,
+          text: c.text,
+          category: c.category,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { draft?: string; political?: boolean; error?: string };
+      if (!res.ok) {
+        setOutcomes((p) => ({ ...p, [c.id]: { ok: false, message: data.error ?? `Drafting failed (HTTP ${res.status}).` } }));
+      } else if (data.political || !data.draft) {
+        setOutcomes((p) => ({
+          ...p,
+          [c.id]: { ok: false, message: "Claude reads this one as political or contentious, so it will not draft. Write your own reply if you want one." },
+        }));
+      } else {
+        setDrafts((p) => ({ ...p, [c.id]: data.draft! }));
+        setOutcomes((p) => {
+          const next = { ...p };
+          delete next[c.id];
+          return next;
+        });
+      }
+    } catch (err) {
+      setOutcomes((p) => ({ ...p, [c.id]: { ok: false, message: err instanceof Error ? err.message : "Network error" } }));
+    } finally {
+      setDrafting((p) => ({ ...p, [c.id]: false }));
     }
   }
 
@@ -161,6 +204,8 @@ export function ReviewQueue({
               draft={drafts[c.id] ?? c.draftReply ?? ""}
               onDraftChange={(text) => setDrafts((prev) => ({ ...prev, [c.id]: text }))}
               onAct={(a) => act(c, a)}
+              onRequestDraft={() => requestDraft(c)}
+              drafting={!!drafting[c.id]}
             />
           </li>
         ))}
@@ -194,6 +239,8 @@ function CommentCard({
   draft,
   onDraftChange,
   onAct,
+  onRequestDraft,
+  drafting,
 }: {
   comment: QueueItem;
   outcome?: Outcome;
@@ -201,17 +248,22 @@ function CommentCard({
   draft: string;
   onDraftChange: (text: string) => void;
   onAct: (a: Action) => void;
+  onRequestDraft: () => void;
+  drafting: boolean;
 }) {
   const c = comment;
   const done = !!outcome?.ok;
   const isDelete = c.category === "delete_troll" || c.category === "delete_spam";
+  const isIgnore = c.category === "ignore";
+  // Ignore cards start compact; the reply box opens on demand.
+  const [replyOpen, setReplyOpen] = useState(false);
   const block = blockEligibility({
     category: c.category,
     confidence: c.confidence,
     priorOffenses: c.authorOffenseCount ?? 0,
     alreadyBlocked: c.authorBlocked,
   });
-  const canReply = c.category === "respond" || c.category === "flag_political";
+  const canReply = c.category === "respond" || c.category === "flag_political" || (isIgnore && replyOpen);
   const hasEmDash = /[\u2014\u2013]/.test(draft);
   const link = c.videoId && c.platformCommentId ? youtubeCommentUrl(c.videoId, c.platformCommentId) : null;
 
@@ -267,8 +319,24 @@ function CommentCard({
       {canReply && (
         <div className="mb-3 rounded-btn border border-line bg-bone/60 p-3">
           <div className="mb-1.5 flex flex-wrap items-center gap-2 text-xs text-ink-muted">
-            <span className="font-medium text-ink">{c.category === "flag_political" ? "Your reply" : "Draft reply"}</span>
-            <span>{c.category === "flag_political" ? "written by you, nothing is pre-filled" : "edit before posting"}</span>
+            <span className="font-medium text-ink">{c.category === "respond" ? "Draft reply" : "Your reply"}</span>
+            <span>
+              {c.category === "flag_political"
+                ? "written by you, nothing is pre-filled"
+                : isIgnore
+                  ? "write it yourself, or have Claude draft one"
+                  : "edit before posting"}
+            </span>
+            {isIgnore && !done && (
+              <button
+                type="button"
+                onClick={onRequestDraft}
+                disabled={drafting || !!busy}
+                className="ml-auto rounded-btn border border-line bg-white px-2 py-0.5 font-medium text-ink transition hover:bg-bone disabled:opacity-60"
+              >
+                {drafting ? "Drafting..." : draft.trim() ? "Redraft with Claude" : "Draft with Claude"}
+              </button>
+            )}
             {c.category === "respond" && c.draftVoice && (
               <span className="rounded-full bg-white px-2 py-0.5 font-medium text-ink">{VOICE_LABELS[c.draftVoice]}</span>
             )}
@@ -299,8 +367,23 @@ function CommentCard({
       {!done && (
         <div className="flex flex-wrap items-center gap-2">
           {canReply && (
-            <ActionButton primary busy={busy === "post_reply"} disabled={!!busy} onClick={() => onAct("post_reply")}>
-              {c.category === "flag_political" ? "Post my reply" : "Approve and post"}
+            <ActionButton primary busy={busy === "post_reply"} disabled={!!busy || drafting} onClick={() => onAct("post_reply")}>
+              {c.category === "respond" ? "Approve and post" : "Post my reply"}
+            </ActionButton>
+          )}
+          {isIgnore && !replyOpen && (
+            <ActionButton primary busy={false} disabled={!!busy} onClick={() => setReplyOpen(true)}>
+              Reply
+            </ActionButton>
+          )}
+          {isIgnore && (
+            <ActionButton danger busy={busy === "hide"} disabled={!!busy} onClick={() => onAct("hide")}>
+              Hide comment
+            </ActionButton>
+          )}
+          {isIgnore && !c.authorBlocked && (
+            <ActionButton danger busy={busy === "hide_and_block"} disabled={!!busy} onClick={() => onAct("hide_and_block")}>
+              Hide and block author
             </ActionButton>
           )}
           {isDelete && (
@@ -328,6 +411,12 @@ function CommentCard({
             </a>
           )}
         </div>
+      )}
+      {isIgnore && !done && (
+        <p className="mt-2 text-[11px] text-ink-muted">
+          Hide is reversible from Activity. Hide and block also stops this author&apos;s future comments; undo the block in
+          YouTube Studio under Settings, Community, Hidden users.
+        </p>
       )}
       {isDelete && !done && block.eligible && (
         <p className="mt-2 text-[11px] text-ink-muted">

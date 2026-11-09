@@ -49,7 +49,7 @@ export function AuthorsPanel({ data }: { data: { offenders: AuthorEntry[]; block
             {CHANNELS[a.channel].displayName} · {a.offenseCount} offense{a.offenseCount === 1 ? "" : "s"}
             {a.lastFlaggedAt ? ` · last ${fmtDay(a.lastFlaggedAt)}` : ""}
             {blocked && a.blockedAt
-              ? ` · blocked ${fmtDay(a.blockedAt)} by ${a.blockedBy ?? "unknown"} (${a.blockedReason === "single_attack" ? "single attack" : "repeat pattern"})`
+              ? ` · blocked ${fmtDay(a.blockedAt)} by ${a.blockedBy ?? "unknown"} (${a.blockedReason === "single_attack" ? "single attack" : a.blockedReason === "manual" ? "manual block" : "repeat pattern"})`
               : ""}
           </div>
         </div>
