@@ -137,8 +137,7 @@ export function ChannelHealthPanel({
         );
       })}
       <p className="text-xs text-ink-muted sm:col-span-2">
-        Automatic sync runs once a day at 13:00 UTC (6 AM Pacific in summer, 5 AM in winter), because the
-        current Vercel plan only allows daily cron jobs. Use Sync now any time for a fresh pull.
+        Automatic sync runs every 15 minutes. Use Sync now any time for a fresh pull.
       </p>
     </section>
   );

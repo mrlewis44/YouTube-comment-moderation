@@ -13,7 +13,9 @@ export const ENV = {
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
   nextAuthSecret: process.env.NEXTAUTH_SECRET ?? "",
-  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
+  // Cleaned: a pasted key with a space, line break or invisible character is an illegal
+  // HTTP header value, which the SDK reports only as "Connection error."
+  anthropicApiKey: (process.env.ANTHROPIC_API_KEY ?? "").replace(/[^\x21-\x7E]/g, ""),
   databaseUrl: process.env.POSTGRES_URL ?? process.env.DATABASE_URL ?? "",
   tokenEncryptionKey: process.env.TOKEN_ENCRYPTION_KEY ?? "",
   // Google Chat incoming-webhook URL for high-priority opportunity pings
@@ -32,7 +34,7 @@ export const ENV = {
     process.env.COPILOT_MOCK_YOUTUBE === "1" ||
     (process.env.NODE_ENV !== "production" && process.env.COPILOT_MOCK_YOUTUBE !== "0"),
   // Optional override for the Claude model id (SPEC Section 3: Sonnet).
-  anthropicModel: process.env.ANTHROPIC_MODEL ?? "",
+  anthropicModel: (process.env.ANTHROPIC_MODEL ?? "").trim(),
   // Optional extra YouTube channel ids whose replies count as a host answer
   // (for example Jeb's own channel). Both in-scope channels always count.
   extraHostChannelIds: (process.env.HOST_CHANNEL_IDS ?? "")

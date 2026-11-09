@@ -1,9 +1,8 @@
 // GET /api/cron/ingest: the scheduled ingestion tick (SPEC Section 8 cadence).
 // Protected by CRON_SECRET: Vercel Cron sends `Authorization: Bearer $CRON_SECRET`.
 //
-// Cadence: vercel.json schedules this once a day (13:00 UTC), because the
-// current Vercel plan only allows daily cron jobs. SPEC asks for every 10 to 15
-// minutes; on a plan that allows it, change the schedule to "*/15 * * * *".
+// Cadence: vercel.json schedules this every 15 minutes (SPEC asks for 10 to 15;
+// the team is on Vercel Pro, which allows it).
 // "Sync now" in the app runs the same pipeline on demand.
 
 import { NextResponse } from "next/server";
