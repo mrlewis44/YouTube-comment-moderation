@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { categorizeComment } from "@/lib/anthropic";
-import { notifyOpportunity } from "@/lib/notify";
+import { notifyAndRecord } from "@/lib/alert-health";
 import type { ChannelKey } from "@/lib/domain";
 
 const body = z.object({
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     // Requires enough context to build the deep link; skipped otherwise.
     let notified = false;
     if (input.channel && input.videoId && input.author && input.platformCommentId) {
-      const outcome = await notifyOpportunity({
+      const outcome = await notifyAndRecord({
         channel: input.channel as ChannelKey,
         videoId: input.videoId,
         videoTitle: input.videoTitle ?? null,

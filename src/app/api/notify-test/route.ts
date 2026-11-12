@@ -1,10 +1,10 @@
 // POST /api/notify-test: send a sample opportunity card to the configured
 // Google Chat webhook so Josh can confirm the space is wired before live
-// ingestion runs. Auth-gated. Does not touch the database.
+// ingestion runs. Auth-gated. Records the result for the alert-health banner.
 
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { notifyOpportunity } from "@/lib/notify";
+import { notifyAndRecord } from "@/lib/alert-health";
 
 export async function POST() {
   const session = await auth();
@@ -12,7 +12,7 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const outcome = await notifyOpportunity({
+  const outcome = await notifyAndRecord({
     channel: "tehb",
     videoId: "dQw4w9WgXcQ",
     videoTitle: "FHA vs Conventional in a high cost market",
@@ -22,7 +22,7 @@ export async function POST() {
     platformCommentId: "SAMPLE_COMMENT_ID",
     opportunityType: "loan",
     opportunityScore: 0.86,
-  });
+  }, session.user.email);
 
   return NextResponse.json(outcome);
 }

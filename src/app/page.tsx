@@ -10,6 +10,9 @@ import { ChannelHealthPanel } from "@/components/ChannelHealthPanel";
 import { ActivityList } from "@/components/ActivityList";
 import { AutopilotPanel, type AutopilotView } from "@/components/AutopilotPanel";
 import { AuthorsPanel } from "@/components/AuthorsPanel";
+import { AlertHealthPanel } from "@/components/AlertHealthPanel";
+import { loadAlertHealth } from "@/lib/alert-health";
+import { ENV } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +35,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
   const tab: Tab = (TABS.find((t) => t.key === tabParam)?.key ?? "queue") as Tab;
   const now = Date.now();
 
-  const [queue, health] = await Promise.all([loadQueue(channels), loadChannelHealth(channels)]);
+  const [queue, health, alertHealth] = await Promise.all([
+    loadQueue(channels),
+    loadChannelHealth(channels),
+    isAdmin ? loadAlertHealth(!!ENV.googleChatWebhookUrl) : Promise.resolve(null),
+  ]);
 
   // Samples only before anything is live: no database, or no channel connected
   // and nothing stored. An empty live queue stays empty (everything handled).
@@ -80,6 +87,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
       </header>
 
       <ChannelHealthPanel health={health} counts={queue.counts} isAdmin={isAdmin} now={now} />
+      {isAdmin && <AlertHealthPanel health={alertHealth} now={now} />}
 
       <nav className="mb-5 flex flex-wrap gap-1 border-b border-line" aria-label="Sections">
         {TABS.map((t) => (

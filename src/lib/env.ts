@@ -20,7 +20,9 @@ export const ENV = {
   tokenEncryptionKey: process.env.TOKEN_ENCRYPTION_KEY ?? "",
   // Google Chat incoming-webhook URL for high-priority opportunity pings
   // (SPEC Section 8a). Optional: if unset, notifications are skipped silently.
-  googleChatWebhookUrl: process.env.GOOGLE_CHAT_WEBHOOK_URL ?? "",
+  // Cleaned the same way as the Anthropic key: a stray space or line break from
+  // pasting would make every send fail.
+  googleChatWebhookUrl: (process.env.GOOGLE_CHAT_WEBHOOK_URL ?? "").replace(/[^\x21-\x7E]/g, ""),
   // Public base URL, used to build the YouTube OAuth callback redirect.
   appUrl: process.env.NEXTAUTH_URL ?? "http://localhost:3000",
   // Shared secret protecting the cron ingest endpoint (SPEC Section 8, cadence).

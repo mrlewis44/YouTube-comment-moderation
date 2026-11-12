@@ -50,7 +50,7 @@ import {
   threadsNeedingFullReplies,
   type NormalizedComment,
 } from "./ingest-core";
-import { notifyOpportunity } from "./notify";
+import { notifyAndRecord } from "./alert-health";
 import { REVERSIBLE_HIDE, type RawCommentThread, type YouTubeClient } from "./youtube";
 import { YouTubeApiError, friendlyYouTubeError } from "./youtube-errors";
 
@@ -67,6 +67,8 @@ export type SyncSummary = {
   autoHidden: number;
   triaged: number;
   notified: number;
+  // Comments that qualified for a Google Chat alert but the card did not go out.
+  notifyFailed: number;
   // Comments stored but not yet triaged by Claude.
   remaining: number;
   error?: string;
@@ -147,6 +149,7 @@ async function startChannel(key: ChannelKey, trigger: SyncTrigger, phase: SyncPh
     autoHidden: 0,
     triaged: 0,
     notified: 0,
+    notifyFailed: 0,
     remaining: 0,
   };
   const ctx: ChannelCtx = { key, row: null, runId: null, client: null, summary, allowTriageWithoutYouTube: false, failedThisRun: [] };
@@ -667,8 +670,13 @@ async function triageOne(
     await db.update(commentReviews).set(fields).where(eq(commentReviews.id, item.reviewId));
     ctx.summary.triaged++;
 
+    // One line per triaged comment so missed alerts can be traced in the logs.
+    console.log(
+      `[triage] ${ctx.key} comment=${item.platformCommentId} category=${category} opp=${fields.opportunityType}:${fields.opportunityScore.toFixed(2)}`,
+    );
+
     if (!isPolitical && !category.startsWith("delete_")) {
-      const outcome = await notifyOpportunity({
+      const outcome = await notifyAndRecord({
         channel: ctx.key,
         videoId: item.videoId,
         videoTitle: item.videoTitle,
@@ -682,6 +690,8 @@ async function triageOne(
       if (outcome.sent) {
         ctx.summary.notified++;
         await db.update(commentReviews).set({ notifiedAt: new Date() }).where(eq(commentReviews.id, item.reviewId));
+      } else if (outcome.attempted) {
+        ctx.summary.notifyFailed++;
       }
     }
     return {};

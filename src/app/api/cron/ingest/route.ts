@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     const results = await runSync(keys, { trigger: "cron", phase: "full", budgetMs: 52_000 });
     // Logged so failures show up in Vercel's runtime logs, not only in the UI.
     for (const r of results) {
-      const line = `[cron ingest] ${r.channel}: ok=${r.ok} fetched=${r.commentsFetched} new=${r.newComments} triaged=${r.triaged} autoHidden=${r.autoHidden} resolved=${r.resolved} remaining=${r.remaining}`;
+      const line = `[cron ingest] ${r.channel}: ok=${r.ok} fetched=${r.commentsFetched} new=${r.newComments} triaged=${r.triaged} autoHidden=${r.autoHidden} resolved=${r.resolved} notified=${r.notified} notifyFailed=${r.notifyFailed} remaining=${r.remaining}`;
       if (r.ok) console.log(line);
       else console.error(`${line} error=${r.errorKind}: ${r.error}`);
     }
